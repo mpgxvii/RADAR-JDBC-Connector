@@ -32,10 +32,10 @@ import java.util.*;
  * This transforms records by copying the record key into the record value.
  */
 public class KeyValueTransform<R extends ConnectRecord<R>> implements Transformation<R> {
-  private static final String PURPOSE = "copying fields from value to key";
+  private static final String PURPOSE = "copying fields from key to value";
   private static final String TIMESTAMP_FIELD = "timestamp";
   private static final String KEYVALUE_SCHEMA_NAME = "KeyToValue";
-  private static final String TIME_FIELD = "time";
+  private static final Set<String> TIME_FIELDS = new HashSet<>(Arrays.asList("time", "timeReceived", "timeCompleted"));
 
   @Override
   public R apply(R r) {
@@ -67,7 +67,7 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
     for (Field field: oldSchema.fields()) {
       String fieldName = field.name();
       Object fieldVal = oldData.get(field);
-      if(fieldName.contains(TIME_FIELD))
+      if(TIME_FIELDS.contains(fieldName))
         fieldVal = convertTimestamp(fieldVal);
       newData.put(fieldName, fieldVal);
     }
@@ -78,7 +78,7 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
   private SchemaBuilder updateSchema(SchemaBuilder schemaBuilder, Schema oldSchema){
     for (Field field: oldSchema.fields()) {
       String fieldName = field.name();
-      if(fieldName.contains(TIME_FIELD))
+      if(TIME_FIELDS.contains(fieldName))
         schemaBuilder.field(fieldName, Schema.INT64_SCHEMA);
       else
         schemaBuilder.field(fieldName, field.schema());
@@ -96,7 +96,7 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
     for (Map.Entry<String, Object> entry : value.entrySet()) {
       String fieldName = entry.getKey();
       Object fieldVal = entry.getValue();
-      if(fieldName.contains(TIME_FIELD))
+      if(TIME_FIELDS.contains(fieldName))
         fieldVal = convertTimestamp(fieldVal);
       newData.put(fieldName, fieldVal);
     }
@@ -105,7 +105,13 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
   }
 
   private long convertTimestamp(Object time){
-    return (long) (Double.parseDouble(time.toString()) * 1000);
+      try {
+        return (long)(new Double(time.toString()) * 1000);
+      }
+      catch (NumberFormatException nfe) {
+        nfe.printStackTrace();
+        return 0L;
+      }
   }
 
   @Override
