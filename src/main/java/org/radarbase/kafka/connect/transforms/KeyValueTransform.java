@@ -108,7 +108,7 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
     if (time instanceof Double) {
       return (long) Math.round((Double) time * 1000.0);
     } else {
-      return (long) time; // If it’s not a double, the conversion may not be correct. Skip conversion.
+      return time; // If it’s not a double, the conversion may not be correct. Skip conversion.
     }
   }
 
