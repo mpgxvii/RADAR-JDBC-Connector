@@ -67,7 +67,7 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
     for (Field field: oldSchema.fields()) {
       String fieldName = field.name();
       Object fieldVal = oldData.get(field);
-      if(TIME_FIELDS.contains(fieldName))
+      if(TIME_FIELDS.contains(fieldName) && field.schema().type() == Schema.Type.FLOAT64)
         fieldVal = convertTimestamp(fieldVal);
       newData.put(fieldName, fieldVal);
     }
@@ -78,7 +78,7 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
   private SchemaBuilder updateSchema(SchemaBuilder schemaBuilder, Schema oldSchema){
     for (Field field: oldSchema.fields()) {
       String fieldName = field.name();
-      if(TIME_FIELDS.contains(fieldName))
+      if(TIME_FIELDS.contains(fieldName) && field.schema().type() == Schema.Type.FLOAT64)
         schemaBuilder.field(fieldName, Schema.INT64_SCHEMA);
       else
         schemaBuilder.field(fieldName, field.schema());
@@ -105,13 +105,11 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
   }
 
   private long convertTimestamp(Object time){
-      try {
-        return (long)(new Double(time.toString()) * 1000);
-      }
-      catch (NumberFormatException nfe) {
-        nfe.printStackTrace();
-        return 0L;
-      }
+    if (time instanceof Double) {
+      return (long) Math.round((Double) time * 1000.0);
+    } else {
+      return (long) time; // If it’s not a double, the conversion may not be correct. Skip conversion.
+    }
   }
 
   @Override
