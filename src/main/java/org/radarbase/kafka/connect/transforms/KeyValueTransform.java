@@ -104,7 +104,7 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
     return record.newRecord(record.topic(), record.kafkaPartition(), null, null, null, newData, record.timestamp());
   }
 
-  private long convertTimestamp(Object time){
+  private Object convertTimestamp(Object time){
     if (time instanceof Double) {
       return (long) Math.round((Double) time * 1000.0);
     } else {
