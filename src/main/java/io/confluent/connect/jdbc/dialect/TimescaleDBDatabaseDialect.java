@@ -61,11 +61,12 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
   ) {
     ExpressionBuilder builder = expressionBuilder();
 
-    builder.append("SELECT create_hypertable('");
-    builder.append(table);
-    builder.append("', 'time', migrate_data => TRUE, chunk_time_interval => ");
-    builder.append(CHUNK_TIME_INTERVAL);
-    builder.append(");");
+    builder.append("CREATE SCHEMA ");
+    builder.append(table.schemaName());
+    builder.append(DELIMITER);
+    builder.append("SET search_path to ");
+    builder.append(table.schemaName());
+    builder.append(DELIMITER);
     return builder.toString();
   }
 
@@ -75,7 +76,11 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
           Collection<SinkRecordField> fields
   ) {
     // This would create the table then convert it to a hyper table.
-    return super.buildCreateTableStatement(table, fields).concat(DELIMITER).concat(buildCreateHyperTableStatement(table));
+    ExpressionBuilder builder = expressionBuilder();
+    builder.append(super.buildCreateTableStatement(parseTableIdentifier(table.tableName()), fields));
+    builder.append(DELIMITER);
+    builder.append(buildCreateHyperTableStatement(parseTableIdentifier(table.tableName())));
+    return builder.toString();
   }
 
 
@@ -84,8 +89,8 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
   ) {
     ExpressionBuilder builder = expressionBuilder();
 
-    builder.append("SELECT create_hypertable('");
-    builder.append(table);
+    builder.append("SELECT public.create_hypertable('");
+    builder.append(table.tableName());
     builder.append("', 'time', migrate_data => TRUE, chunk_time_interval => ");
     builder.append(CHUNK_TIME_INTERVAL);
     builder.append(");");

@@ -15,6 +15,7 @@
 
 package io.confluent.connect.jdbc.sink;
 
+import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
@@ -57,7 +58,7 @@ public class JdbcDbWriter {
 
     final Map<TableId, BufferedRecords> bufferByTable = new HashMap<>();
     for (SinkRecord record : records) {
-      final TableId tableId = destinationTable(record.topic());
+      final TableId tableId = destinationTable(record);
       BufferedRecords buffer = bufferByTable.get(tableId);
       if (buffer == null) {
         buffer = new BufferedRecords(config, tableId, dbDialect, dbStructure, connection);
@@ -79,12 +80,15 @@ public class JdbcDbWriter {
     cachedConnectionProvider.close();
   }
 
-  TableId destinationTable(String topic) {
-    final String tableName = config.tableNameFormat.replace("${topic}", topic);
+  TableId destinationTable(SinkRecord record) {
+    String schemaNameKey = config.schemaNameFormat;
+    String schemaName = (String) ((Struct)record.value()).get(schemaNameKey);
+
+    final String tableName = schemaName + "." + config.tableNameFormat.replace("${topic}", record.topic());
     if (tableName.isEmpty()) {
       throw new ConnectException(String.format(
           "Destination table name for topic '%s' is empty using the format string '%s'",
-          topic,
+          record.topic(),
           config.tableNameFormat
       ));
     }

@@ -1661,6 +1661,13 @@ public class GenericDatabaseDialect implements DatabaseDialect {
   }
 
   @Override
+  public String buildCreateSchemaStatement(
+          TableId table
+  ) {
+    return null;
+  }
+
+  @Override
   public String buildDropTableStatement(
       TableId table,
       DropOptions options
