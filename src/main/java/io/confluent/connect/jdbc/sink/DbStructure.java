@@ -89,9 +89,9 @@ public class DbStructure {
           String.format("Table %s is missing and auto-creation is disabled", tableId)
       );
     }
-    String sql = dbDialect.buildCreateTableStatement(tableId, fieldsMetadata.allFields.values());
+    List<String> sql = dbDialect.buildCreateTableStatements(tableId, fieldsMetadata.allFields.values());
     log.info("Creating table with sql: {}", sql);
-    dbDialect.applyDdlStatements(connection, Collections.singletonList(sql));
+    dbDialect.applyDdlStatements(connection, sql);
   }
 
   /**

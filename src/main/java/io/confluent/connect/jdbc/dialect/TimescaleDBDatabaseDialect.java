@@ -21,6 +21,7 @@ import io.confluent.connect.jdbc.util.*;
 import org.apache.kafka.common.config.AbstractConfig;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -57,12 +58,16 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
   }
 
   @Override
-  public String buildCreateTableStatement(
+  public List<String> buildCreateTableStatements(
           TableId table,
           Collection<SinkRecordField> fields
   ) {
     // This would create the table then convert it to a hyper table.
-    return super.buildCreateTableStatement(table, fields).concat(DELIMITER).concat(buildCreateHyperTableStatement(table));
+    List<String> sqlQueries = new ArrayList<>();
+    sqlQueries.add(super.buildCreateTableStatement(table, fields));
+    sqlQueries.add(buildCreateHyperTableStatement(table));
+
+    return sqlQueries;
   }
 
 

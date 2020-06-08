@@ -396,6 +396,15 @@ public interface DatabaseDialect extends ConnectionProvider {
   String buildCreateTableStatement(TableId table, Collection<SinkRecordField> fields);
 
   /**
+   * Build the CREATE TABLE statement expression for the given table and its columns.
+   *
+   * @param table  the identifier of the table; may not be null
+   * @param fields the information about the fields in the sink records; may not be null
+   * @return the CREATE TABLE statement; may not be null
+   */
+  List<String> buildCreateTableStatements(TableId table, Collection<SinkRecordField> fields);
+
+  /**
    * Build the ALTER TABLE statement expression for the given table and its columns.
    *
    * @param table  the identifier of the table; may not be null
