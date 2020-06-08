@@ -1660,6 +1660,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
     return builder.toString();
   }
 
+  @Override
   public List<String> buildCreateTableStatements(
           TableId table,
           Collection<SinkRecordField> fields
