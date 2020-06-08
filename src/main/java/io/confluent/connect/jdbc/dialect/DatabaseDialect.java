@@ -395,8 +395,6 @@ public interface DatabaseDialect extends ConnectionProvider {
    */
   String buildCreateTableStatement(TableId table, Collection<SinkRecordField> fields);
 
-  String buildCreateSchemaStatement(TableId table);
-
   /**
    * Build the CREATE TABLE statement expression for the given table and its columns.
    *

@@ -65,6 +65,7 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
     // This would create the table then convert it to a hyper table.
     List<String> sqlQueries = new ArrayList<>();
     sqlQueries.add(buildCreateSchemaStatement(tableId));
+    sqlQueries.add(buildSetSearchPathStatement(tableId));
     sqlQueries.add(super.buildCreateTableStatement(table, fields));
     sqlQueries.add(buildCreateHyperTableStatement(table));
 
@@ -85,17 +86,23 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
     return builder.toString();
   }
 
-    public String buildCreateSchemaStatement(
+  public String buildCreateSchemaStatement(
           TableId table
   ) {
     ExpressionBuilder builder = expressionBuilder();
 
     builder.append("CREATE SCHEMA ");
     builder.append(table.schemaName());
-    builder.append(DELIMITER);
+    return builder.toString();
+  }
+
+  public String buildSetSearchPathStatement(
+          TableId table
+  ) {
+    ExpressionBuilder builder = expressionBuilder();
+
     builder.append("SET search_path to ");
     builder.append(table.schemaName());
-    builder.append(DELIMITER);
     return builder.toString();
   }
 
