@@ -21,6 +21,7 @@ import io.confluent.connect.jdbc.util.*;
 import org.apache.kafka.common.config.AbstractConfig;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -56,31 +57,18 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
     super(config);
   }
 
-  public String buildCreateSchemaStatement(
-          TableId table
-  ) {
-    ExpressionBuilder builder = expressionBuilder();
-
-    builder.append("CREATE SCHEMA ");
-    builder.append(table.schemaName());
-    builder.append(DELIMITER);
-    builder.append("SET search_path to ");
-    builder.append(table.schemaName());
-    builder.append(DELIMITER);
-    return builder.toString();
-  }
-
   @Override
-  public String buildCreateTableStatement(
+  public List<String> buildCreateTableStatements(
           TableId table,
           Collection<SinkRecordField> fields
   ) {
     // This would create the table then convert it to a hyper table.
-    ExpressionBuilder builder = expressionBuilder();
-    builder.append(super.buildCreateTableStatement(parseTableIdentifier(table.tableName()), fields));
-    builder.append(DELIMITER);
-    builder.append(buildCreateHyperTableStatement(parseTableIdentifier(table.tableName())));
-    return builder.toString();
+    List<String> sqlQueries = new ArrayList<>();
+    sqlQueries.add(buildCreateSchemaStatement(tableId));
+    sqlQueries.add(super.buildCreateTableStatement(table, fields));
+    sqlQueries.add(buildCreateHyperTableStatement(table));
+
+    return sqlQueries;
   }
 
 
@@ -94,6 +82,20 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
     builder.append("', 'time', migrate_data => TRUE, chunk_time_interval => ");
     builder.append(CHUNK_TIME_INTERVAL);
     builder.append(");");
+    return builder.toString();
+  }
+
+    public String buildCreateSchemaStatement(
+          TableId table
+  ) {
+    ExpressionBuilder builder = expressionBuilder();
+
+    builder.append("CREATE SCHEMA ");
+    builder.append(table.schemaName());
+    builder.append(DELIMITER);
+    builder.append("SET search_path to ");
+    builder.append(table.schemaName());
+    builder.append(DELIMITER);
     return builder.toString();
   }
 

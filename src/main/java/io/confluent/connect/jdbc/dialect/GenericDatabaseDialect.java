@@ -1667,6 +1667,15 @@ public class GenericDatabaseDialect implements DatabaseDialect {
     return null;
   }
 
+  public List<String> buildCreateTableStatements(
+          TableId table,
+          Collection<SinkRecordField> fields
+  ) {
+    String sql = buildCreateTableStatement(table, fields);
+    return Collections.singletonList(sql);
+  }
+
+
   @Override
   public String buildDropTableStatement(
       TableId table,
