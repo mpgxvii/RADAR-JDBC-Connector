@@ -64,8 +64,8 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
   ) {
     // This would create the table then convert it to a hyper table.
     List<String> sqlQueries = new ArrayList<>();
-    sqlQueries.add(buildCreateSchemaStatement(tableId));
-    sqlQueries.add(buildSetSearchPathStatement(tableId));
+    sqlQueries.add(buildCreateSchemaStatement(table));
+    sqlQueries.add(buildSetSearchPathStatement(table));
     sqlQueries.add(super.buildCreateTableStatement(table, fields));
     sqlQueries.add(buildCreateHyperTableStatement(table));
 
