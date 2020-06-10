@@ -24,6 +24,8 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.confluent.connect.jdbc.dialect.DatabaseDialect;
 import io.confluent.connect.jdbc.util.CachedConnectionProvider;
@@ -81,10 +83,13 @@ public class JdbcDbWriter {
   }
 
   TableId destinationTable(SinkRecord record) {
-    String schemaNameKey = config.schemaNameFormat;
-    String schemaName = (String) ((Struct)record.value()).get(schemaNameKey);
+    StringBuilder name = new StringBuilder();
+    final String schemaName = destinationSchema(record);
+    if (!schemaName.isEmpty()) name.append(schemaName).append(".");
+    name.append(config.tableNameFormat.replace("${topic}", record.topic()));
 
-    final String tableName = schemaName + "." + config.tableNameFormat.replace("${topic}", record.topic());
+    final String tableName = name.toString();
+
     if (tableName.isEmpty()) {
       throw new ConnectException(String.format(
           "Destination table name for topic '%s' is empty using the format string '%s'",
@@ -93,5 +98,24 @@ public class JdbcDbWriter {
       ));
     }
     return dbDialect.parseTableIdentifier(tableName);
+  }
+
+  String destinationSchema(SinkRecord record) {
+    String schemaNameFormat = config.schemaNameFormat;
+    Struct valueStruct = ((Struct)record.value());
+
+    StringBuilder schemaName = new StringBuilder();
+    Pattern pattern = Pattern.compile("\\$\\{(.*?)\\}");
+    Matcher matcher = pattern.matcher(schemaNameFormat);
+    int lastStart = 0;
+    while (matcher.find()) {
+      String subString = schemaNameFormat.substring(lastStart,matcher.start());
+      String key = matcher.group(1);
+      String replacement = valueStruct.getString(key);
+      schemaName.append(subString).append(replacement);
+      lastStart = matcher.end();
+    }
+
+    return schemaName.toString();
   }
 }

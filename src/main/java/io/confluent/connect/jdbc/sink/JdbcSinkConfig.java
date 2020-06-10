@@ -95,9 +95,11 @@ public class JdbcSinkConfig extends AbstractConfig {
   private static final String TABLE_NAME_FORMAT_DISPLAY = "Table Name Format";
 
   public static final String SCHEMA_NAME_FORMAT = "schema.name.format";
-  private static final String SCHEMA_NAME_FORMAT_DEFAULT = "projectId";
+  private static final String SCHEMA_NAME_FORMAT_DEFAULT = "";
   private static final String SCHEMA_NAME_FORMAT_DOC =
-          "A format string for the destination schema name.";
+          "A format string for the destination schema name, which may contain '${key}' as a "
+          + "placeholder for a key in the record key."
+          + "For example, ``${projectId}`` for projectId 'myProject' will map to the schema name 'myProject'.";
   private static final String SCHEMA_NAME_FORMAT_DISPLAY = "Schema Name Format";
 
   public static final String MAX_RETRIES = "max.retries";
@@ -127,7 +129,7 @@ public class JdbcSinkConfig extends AbstractConfig {
   private static final String DELETE_ENABLED_DISPLAY = "Enable deletes";
 
   public static final String AUTO_CREATE = "auto.create";
-  private static final String AUTO_CREATE_DEFAULT = "false";
+  private static final String AUTO_CREATE_DEFAULT = "true";
   private static final String AUTO_CREATE_DOC =
       "Whether to automatically create the destination table based on record schema if it is "
       + "found to be missing by issuing ``CREATE``.";
