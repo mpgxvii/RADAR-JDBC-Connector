@@ -102,7 +102,7 @@ public class JdbcDbWriter {
 
   String destinationSchema(SinkRecord record) {
     String schemaNameFormat = config.schemaNameFormat;
-    Struct valueStruct = ((Struct)record.value());
+    Struct keyData = ((Struct)record.key());
 
     StringBuilder schemaName = new StringBuilder();
     Pattern pattern = Pattern.compile("\\$\\{(.*?)\\}");
@@ -111,7 +111,7 @@ public class JdbcDbWriter {
     while (matcher.find()) {
       String subString = schemaNameFormat.substring(lastStart,matcher.start());
       String key = matcher.group(1);
-      String replacement = valueStruct.getString(key);
+      String replacement = keyData.getString(key);
       schemaName.append(subString).append(replacement);
       lastStart = matcher.end();
     }
