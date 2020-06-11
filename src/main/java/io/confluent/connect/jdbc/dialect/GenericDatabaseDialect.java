@@ -1661,6 +1661,16 @@ public class GenericDatabaseDialect implements DatabaseDialect {
   }
 
   @Override
+  public List<String> buildCreateTableStatements(
+          TableId table,
+          Collection<SinkRecordField> fields
+  ) {
+    String sql = buildCreateTableStatement(table, fields);
+    return Collections.singletonList(sql);
+  }
+
+
+  @Override
   public String buildDropTableStatement(
       TableId table,
       DropOptions options
