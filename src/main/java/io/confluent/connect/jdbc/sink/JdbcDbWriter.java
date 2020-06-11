@@ -15,6 +15,7 @@
 
 package io.confluent.connect.jdbc.sink;
 
+import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
@@ -23,6 +24,8 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.confluent.connect.jdbc.dialect.DatabaseDialect;
 import io.confluent.connect.jdbc.util.CachedConnectionProvider;
@@ -57,7 +60,7 @@ public class JdbcDbWriter {
 
     final Map<TableId, BufferedRecords> bufferByTable = new HashMap<>();
     for (SinkRecord record : records) {
-      final TableId tableId = destinationTable(record.topic());
+      final TableId tableId = destinationTable(record);
       BufferedRecords buffer = bufferByTable.get(tableId);
       if (buffer == null) {
         buffer = new BufferedRecords(config, tableId, dbDialect, dbStructure, connection);
@@ -79,15 +82,40 @@ public class JdbcDbWriter {
     cachedConnectionProvider.close();
   }
 
-  TableId destinationTable(String topic) {
-    final String tableName = config.tableNameFormat.replace("${topic}", topic);
+  TableId destinationTable(SinkRecord record) {
+    StringBuilder name = new StringBuilder();
+    final String schemaName = destinationSchema(record);
+    if (!schemaName.isEmpty()) name.append(schemaName).append(".");
+    name.append(config.tableNameFormat.replace("${topic}", record.topic()));
+
+    final String tableName = name.toString();
+
     if (tableName.isEmpty()) {
       throw new ConnectException(String.format(
           "Destination table name for topic '%s' is empty using the format string '%s'",
-          topic,
+          record.topic(),
           config.tableNameFormat
       ));
     }
     return dbDialect.parseTableIdentifier(tableName);
+  }
+
+  String destinationSchema(SinkRecord record) {
+    String schemaNameFormat = config.schemaNameFormat;
+    Struct keyData = ((Struct)record.key());
+
+    StringBuilder schemaName = new StringBuilder();
+    Pattern pattern = Pattern.compile("\\$\\{(.*?)\\}");
+    Matcher matcher = pattern.matcher(schemaNameFormat);
+    int lastStart = 0;
+    while (matcher.find()) {
+      String subString = schemaNameFormat.substring(lastStart,matcher.start());
+      String key = matcher.group(1);
+      String replacement = keyData.getString(key);
+      schemaName.append(subString).append(replacement);
+      lastStart = matcher.end();
+    }
+
+    return schemaName.toString();
   }
 }

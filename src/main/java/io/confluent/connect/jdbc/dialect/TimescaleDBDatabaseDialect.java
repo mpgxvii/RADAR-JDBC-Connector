@@ -62,8 +62,10 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
           TableId table,
           Collection<SinkRecordField> fields
   ) {
-    // This would create the table then convert it to a hyper table.
+    // This would create the schema and table then convert the table to a hyper table.
     List<String> sqlQueries = new ArrayList<>();
+    if(table.schemaName() != null)
+      sqlQueries.add(buildCreateSchemaStatement(table));
     sqlQueries.add(super.buildCreateTableStatement(table, fields));
     sqlQueries.add(buildCreateHyperTableStatement(table));
 
@@ -81,6 +83,16 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
     builder.append("', 'time', migrate_data => TRUE, chunk_time_interval => ");
     builder.append(CHUNK_TIME_INTERVAL);
     builder.append(");");
+    return builder.toString();
+  }
+
+  public String buildCreateSchemaStatement(
+          TableId table
+  ) {
+    ExpressionBuilder builder = expressionBuilder();
+
+    builder.append("CREATE SCHEMA IF NOT EXISTS ");
+    builder.append(table.schemaName());
     return builder.toString();
   }
 

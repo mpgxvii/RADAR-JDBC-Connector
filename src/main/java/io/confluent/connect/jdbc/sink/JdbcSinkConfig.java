@@ -94,6 +94,14 @@ public class JdbcSinkConfig extends AbstractConfig {
       + "'kafka_orders'.";
   private static final String TABLE_NAME_FORMAT_DISPLAY = "Table Name Format";
 
+  public static final String SCHEMA_NAME_FORMAT = "schema.name.format";
+  private static final String SCHEMA_NAME_FORMAT_DEFAULT = "";
+  private static final String SCHEMA_NAME_FORMAT_DOC =
+          "A format string for the destination schema name, which may contain '${key}' as a "
+          + "placeholder for a key in the record key."
+          + "For example, ``${projectId}`` for projectId 'myProject' will map to the schema name 'myProject'.";
+  private static final String SCHEMA_NAME_FORMAT_DISPLAY = "Schema Name Format";
+
   public static final String MAX_RETRIES = "max.retries";
   private static final int MAX_RETRIES_DEFAULT = 10;
   private static final String MAX_RETRIES_DOC =
@@ -121,7 +129,7 @@ public class JdbcSinkConfig extends AbstractConfig {
   private static final String DELETE_ENABLED_DISPLAY = "Enable deletes";
 
   public static final String AUTO_CREATE = "auto.create";
-  private static final String AUTO_CREATE_DEFAULT = "false";
+  private static final String AUTO_CREATE_DEFAULT = "true";
   private static final String AUTO_CREATE_DOC =
       "Whether to automatically create the destination table based on record schema if it is "
       + "found to be missing by issuing ``CREATE``.";
@@ -349,6 +357,17 @@ public class JdbcSinkConfig extends AbstractConfig {
             ConfigDef.Width.LONG,
             TABLE_NAME_FORMAT_DISPLAY
         )
+          .define(
+                  SCHEMA_NAME_FORMAT,
+                  ConfigDef.Type.STRING,
+                  SCHEMA_NAME_FORMAT_DEFAULT,
+                  ConfigDef.Importance.MEDIUM,
+                  SCHEMA_NAME_FORMAT_DOC,
+                  DATAMAPPING_GROUP,
+                  6,
+                  ConfigDef.Width.LONG,
+                  SCHEMA_NAME_FORMAT_DISPLAY
+          )
         .define(
             PK_MODE,
             ConfigDef.Type.STRING,
@@ -457,6 +476,7 @@ public class JdbcSinkConfig extends AbstractConfig {
   public final String connectionUser;
   public final String connectionPassword;
   public final String tableNameFormat;
+  public final String schemaNameFormat;
   public final int batchSize;
   public final boolean deleteEnabled;
   public final int maxRetries;
@@ -478,6 +498,7 @@ public class JdbcSinkConfig extends AbstractConfig {
     connectionUser = getString(CONNECTION_USER);
     connectionPassword = getPasswordValue(CONNECTION_PASSWORD);
     tableNameFormat = getString(TABLE_NAME_FORMAT).trim();
+    schemaNameFormat = getString(SCHEMA_NAME_FORMAT).trim();
     batchSize = getInt(BATCH_SIZE);
     deleteEnabled = getBoolean(DELETE_ENABLED);
     maxRetries = getInt(MAX_RETRIES);
