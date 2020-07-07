@@ -16,10 +16,7 @@ package org.radarbase.kafka.connect.transforms;
 
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
-import org.apache.kafka.connect.data.Field;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
-import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.*;
 import org.apache.kafka.connect.transforms.Transformation;
 import static org.apache.kafka.connect.transforms.util.Requirements.requireMap;
 import static org.apache.kafka.connect.transforms.util.Requirements.requireStruct;
@@ -36,6 +33,7 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
   private static final String TIMESTAMP_FIELD = "timestamp";
   private static final String KEYVALUE_SCHEMA_NAME = "KeyToValue";
   private static final Set<String> TIME_FIELDS = new HashSet<>(Arrays.asList("time", "timeReceived", "timeCompleted"));
+  private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
   @Override
   public R apply(R r) {
@@ -79,7 +77,7 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
     for (Field field: oldSchema.fields()) {
       String fieldName = field.name();
       if(TIME_FIELDS.contains(fieldName) && field.schema().type() == Schema.Type.FLOAT64)
-        schemaBuilder.field(fieldName, Schema.INT64_SCHEMA);
+        schemaBuilder.field(fieldName, Timestamp.SCHEMA);
       else
         schemaBuilder.field(fieldName, field.schema());
     }
@@ -107,7 +105,9 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
 
   private Object convertTimestamp(Object time){
     if (time instanceof Double) {
-      return (long) Math.round((Double) time * 1000.0);
+      Calendar result = Calendar.getInstance(UTC);
+      result.setTimeInMillis((long) Math.round((Double) time * 1000));
+      return result.getTime();
     } else {
       return time; // If it’s not a double, the conversion may not be correct. Skip conversion.
     }
