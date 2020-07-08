@@ -116,6 +116,6 @@ public class JdbcDbWriter {
       lastStart = matcher.end();
     }
 
-    return schemaName.toString();
+    return schemaName.toString().toLowerCase();
   }
 }
