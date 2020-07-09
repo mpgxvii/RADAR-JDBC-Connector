@@ -22,6 +22,7 @@ import static org.apache.kafka.connect.transforms.util.Requirements.requireMap;
 import static org.apache.kafka.connect.transforms.util.Requirements.requireStruct;
 
 import java.util.*;
+import java.util.Date;
 
 /**
  *
@@ -105,9 +106,8 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
 
   private Object convertTimestamp(Object time){
     if (time instanceof Double) {
-      Calendar result = Calendar.getInstance(UTC);
-      result.setTimeInMillis((long) Math.round((Double) time * 1000));
-      return result.getTime();
+      Date result = new Date((long) Math.round((Double) time * 1000));
+      return result;
     } else {
       return time; // If it’s not a double, the conversion may not be correct. Skip conversion.
     }
