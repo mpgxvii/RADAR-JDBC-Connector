@@ -34,7 +34,6 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
   private static final String TIMESTAMP_FIELD = "timestamp";
   private static final String KEYVALUE_SCHEMA_NAME = "KeyToValue";
   private static final Set<String> TIME_FIELDS = new HashSet<>(Arrays.asList("time", "timeReceived", "timeCompleted"));
-  private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
   @Override
   public R apply(R r) {
