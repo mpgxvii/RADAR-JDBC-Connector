@@ -85,7 +85,9 @@ public class JdbcDbWriter {
   TableId destinationTable(SinkRecord record) {
     StringBuilder name = new StringBuilder();
     final String schemaName = destinationSchema(record);
-    if (!schemaName.isEmpty()) name.append(schemaName).append(".");
+    if (!schemaName.isEmpty()) {
+      name.append(schemaName).append(".");
+    }
     name.append(config.tableNameFormat.replace("${topic}", record.topic()));
 
     final String tableName = name.toString();
