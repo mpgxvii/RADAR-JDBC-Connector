@@ -103,19 +103,20 @@ public class JdbcDbWriter {
   }
 
   String destinationSchema(SinkRecord record) {
-    String schemaNameFormat = config.schemaNameFormat;
-    Struct keyData = ((Struct)record.key());
-
     StringBuilder schemaName = new StringBuilder();
-    Pattern pattern = Pattern.compile("\\$\\{(.*?)\\}");
-    Matcher matcher = pattern.matcher(schemaNameFormat);
-    int lastStart = 0;
-    while (matcher.find()) {
-      String subString = schemaNameFormat.substring(lastStart,matcher.start());
-      String key = matcher.group(1);
-      String replacement = keyData.getString(key);
-      schemaName.append(subString).append(replacement);
-      lastStart = matcher.end();
+    String schemaNameFormat = config.schemaNameFormat;
+    if (!schemaNameFormat.isEmpty() && (record.key() instanceof Struct)) {
+      Struct keyData = ((Struct) record.key());
+      Pattern pattern = Pattern.compile("\\$\\{(.*?)\\}");
+      Matcher matcher = pattern.matcher(schemaNameFormat);
+      int lastStart = 0;
+      while (matcher.find()) {
+        String subString = schemaNameFormat.substring(lastStart, matcher.start());
+        String key = matcher.group(1);
+        String replacement = keyData.getString(key);
+        schemaName.append(subString).append(replacement);
+        lastStart = matcher.end();
+      }
     }
 
     return schemaName.toString().toLowerCase();
