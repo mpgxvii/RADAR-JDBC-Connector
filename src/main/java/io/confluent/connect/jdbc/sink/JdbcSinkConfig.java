@@ -95,11 +95,12 @@ public class JdbcSinkConfig extends AbstractConfig {
   private static final String TABLE_NAME_FORMAT_DISPLAY = "Table Name Format";
 
   public static final String SCHEMA_NAME_FORMAT = "schema.name.format";
-  private static final String SCHEMA_NAME_FORMAT_DEFAULT = "";
+  private static final String SCHEMA_NAME_FORMAT_DEFAULT = "public";
   private static final String SCHEMA_NAME_FORMAT_DOC =
           "A format string for the destination schema name, which may contain '${key}' as a "
           + "placeholder for a key in the record key."
-          + "For example, ``${projectId}`` for projectId 'myProject' will map to the schema name 'myProject'.";
+          + "For example, ``${projectId}`` for projectId 'myProject' "
+          + "will map to the schema name 'myProject'.";
   private static final String SCHEMA_NAME_FORMAT_DISPLAY = "Schema Name Format";
 
   public static final String MAX_RETRIES = "max.retries";

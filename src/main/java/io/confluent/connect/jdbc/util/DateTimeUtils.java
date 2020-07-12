@@ -65,6 +65,14 @@ public class DateTimeUtils {
     }).format(date);
   }
 
+  public static String formatTimestamptz(Date date, TimeZone timeZone) {
+    return TIMEZONE_TIMESTAMP_FORMATS.get().computeIfAbsent(timeZone, aTimeZone -> {
+      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSX");
+      sdf.setTimeZone(aTimeZone);
+      return sdf;
+    }).format(date);
+  }
+
   private DateTimeUtils() {
   }
 }

@@ -85,7 +85,9 @@ public class JdbcDbWriter {
   TableId destinationTable(SinkRecord record) {
     StringBuilder name = new StringBuilder();
     final String schemaName = destinationSchema(record);
-    if (!schemaName.isEmpty()) name.append(schemaName).append(".");
+    if (!schemaName.isEmpty()) {
+      name.append(schemaName).append(".");
+    }
     name.append(config.tableNameFormat.replace("${topic}", record.topic()));
 
     final String tableName = name.toString();
@@ -101,19 +103,21 @@ public class JdbcDbWriter {
   }
 
   String destinationSchema(SinkRecord record) {
-    String schemaNameFormat = config.schemaNameFormat;
-    Struct keyData = ((Struct)record.key());
-
     StringBuilder schemaName = new StringBuilder();
-    Pattern pattern = Pattern.compile("\\$\\{(.*?)\\}");
-    Matcher matcher = pattern.matcher(schemaNameFormat);
-    int lastStart = 0;
-    while (matcher.find()) {
-      String subString = schemaNameFormat.substring(lastStart,matcher.start());
-      String key = matcher.group(1);
-      String replacement = keyData.getString(key);
-      schemaName.append(subString).append(replacement);
-      lastStart = matcher.end();
+    String schemaNameFormat = config.schemaNameFormat;
+    if (!schemaNameFormat.isEmpty() && (record.key() instanceof Struct)) {
+      Struct keyData = ((Struct) record.key());
+      Pattern pattern = Pattern.compile("\\$\\{(.*?)\\}");
+      Matcher matcher = pattern.matcher(schemaNameFormat);
+      int lastStart = 0;
+      while (matcher.find()) {
+        String subString = schemaNameFormat.substring(lastStart, matcher.start());
+        String key = matcher.group(1);
+        String replacement = keyData.getString(key);
+        schemaName.append(subString).append(replacement);
+        lastStart = matcher.end();
+      }
+      schemaName.append(schemaNameFormat.substring(lastStart));
     }
 
     return schemaName.toString().toLowerCase();

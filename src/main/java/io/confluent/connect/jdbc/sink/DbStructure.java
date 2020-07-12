@@ -21,7 +21,10 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import io.confluent.connect.jdbc.dialect.DatabaseDialect;
 import io.confluent.connect.jdbc.sink.metadata.FieldsMetadata;
@@ -85,7 +88,8 @@ public class DbStructure {
           String.format("Table %s is missing and auto-creation is disabled", tableId)
       );
     }
-    List<String> sql = dbDialect.buildCreateTableStatements(tableId, fieldsMetadata.allFields.values());
+    List<String> sql = dbDialect.buildCreateTableStatements(tableId,
+            fieldsMetadata.allFields.values());
     log.info("Creating table with sql: {}", sql);
     dbDialect.applyDdlStatements(connection, sql);
   }
