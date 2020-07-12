@@ -117,6 +117,7 @@ public class JdbcDbWriter {
         schemaName.append(subString).append(replacement);
         lastStart = matcher.end();
       }
+      schemaName.append(schemaNameFormat.substring(lastStart));
     }
 
     return schemaName.toString().toLowerCase();
