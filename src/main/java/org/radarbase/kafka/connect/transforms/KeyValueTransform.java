@@ -16,15 +16,13 @@ package org.radarbase.kafka.connect.transforms;
 
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
-import org.apache.kafka.connect.data.Field;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
-import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.*;
 import org.apache.kafka.connect.transforms.Transformation;
 import static org.apache.kafka.connect.transforms.util.Requirements.requireMap;
 import static org.apache.kafka.connect.transforms.util.Requirements.requireStruct;
 
 import java.util.*;
+import java.util.Date;
 
 /**
  *
@@ -60,7 +58,7 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
     newData = addValuesToNewSchema(newData, recordValue, r.valueSchema());
     newData.put(TIMESTAMP_FIELD, r.timestamp());
 
-    return r.newRecord(r.topic(), r.kafkaPartition(), null, null, schema, newData, r.timestamp());
+    return r.newRecord(r.topic(), r.kafkaPartition(), r.keySchema(), r.key(), schema, newData, r.timestamp());
   }
 
   private Struct addValuesToNewSchema(Struct newData, Struct oldData, Schema oldSchema){
@@ -79,16 +77,16 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
     for (Field field: oldSchema.fields()) {
       String fieldName = field.name();
       if(TIME_FIELDS.contains(fieldName) && field.schema().type() == Schema.Type.FLOAT64)
-        schemaBuilder.field(fieldName, Schema.INT64_SCHEMA);
+        schemaBuilder.field(fieldName, Timestamp.SCHEMA);
       else
         schemaBuilder.field(fieldName, field.schema());
     }
     return schemaBuilder;
   }
 
-  private R applySchemaless(R record) {
-    Map<String, Object> value = requireMap(record.value(), PURPOSE);
-    Map<String, Object> key = requireMap(record.key(), PURPOSE);
+  private R applySchemaless(R r) {
+    Map<String, Object> value = requireMap(r.value(), PURPOSE);
+    Map<String, Object> key = requireMap(r.key(), PURPOSE);
     Map<String, Object> newData = new HashMap<>();
     for (Map.Entry<String, Object> entry : key.entrySet()) {
       newData.put(entry.getKey(), entry.getValue());
@@ -100,13 +98,15 @@ public class KeyValueTransform<R extends ConnectRecord<R>> implements Transforma
         fieldVal = convertTimestamp(fieldVal);
       newData.put(fieldName, fieldVal);
     }
-    newData.put(TIMESTAMP_FIELD, record.timestamp());
-    return record.newRecord(record.topic(), record.kafkaPartition(), null, null, null, newData, record.timestamp());
+    newData.put(TIMESTAMP_FIELD, r.timestamp());
+    
+    return r.newRecord(r.topic(), r.kafkaPartition(), null, r.key(), null, newData, r.timestamp());
   }
 
   private Object convertTimestamp(Object time){
     if (time instanceof Double) {
-      return (long) Math.round((Double) time * 1000.0);
+      Date result = new Date((long) Math.round((Double) time * 1000));
+      return result;
     } else {
       return time; // If it’s not a double, the conversion may not be correct. Skip conversion.
     }
