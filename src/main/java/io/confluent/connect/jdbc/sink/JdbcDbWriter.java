@@ -34,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class JdbcDbWriter {
+  private static final Pattern INLINE_VARIABLE_PATTERN = Pattern.compile("\\$\\{(.*?)\\}");
   private static final Logger log = LoggerFactory.getLogger(JdbcDbWriter.class);
 
   private final JdbcSinkConfig config;
@@ -107,8 +108,7 @@ public class JdbcDbWriter {
     String schemaNameFormat = config.schemaNameFormat;
     if (!schemaNameFormat.isEmpty() && (record.key() instanceof Struct)) {
       Struct keyData = ((Struct) record.key());
-      Pattern pattern = Pattern.compile("\\$\\{(.*?)\\}");
-      Matcher matcher = pattern.matcher(schemaNameFormat);
+      Matcher matcher = INLINE_VARIABLE_PATTERN.matcher(schemaNameFormat);
       int lastStart = 0;
       while (matcher.find()) {
         String subString = schemaNameFormat.substring(lastStart, matcher.start());
