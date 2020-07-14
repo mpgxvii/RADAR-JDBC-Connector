@@ -1,0 +1,15 @@
+name = radar-timescale-sink
+connector.class = io.confluent.connect.jdbc.JdbcSinkConnector
+tasks.max = 2
+transforms = recordTransform
+transforms.recordTransform.type = org.radarbase.kafka.connect.transforms.KeyValueTransform
+topics = android_phone_relative_location, android_phone_battery_level, connect_upload_altoida_summary, connect_fitbit_intraday_heart_rate, connect_fitbit_intraday_calories, connect_fitbit_intraday_steps
+connection.url = jdbc:postgresql://[url]/[dbname]
+connection.user = 
+connection.password = 
+dialect.name = TimescaleDBDatabaseDialect
+insert.mode = upsert
+schema.name.format = ${projectId}
+pk.mode = record_value
+pk.fields = time, userId, projectId
+auto.create = true
