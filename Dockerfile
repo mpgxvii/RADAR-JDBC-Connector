@@ -12,49 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM openjdk:8-alpine as builder
+FROM maven:3.6-jdk-8 as builder
 
-# ----
-# Install Maven
-RUN apk add --no-cache curl tar bash
-ARG MAVEN_VERSION=3.3.9
-ARG USER_HOME_DIR="/root"
-RUN mkdir -p /usr/share/maven && \
-    curl -fsSL http://apache.osuosl.org/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz | tar -xzC /usr/share/maven --strip-components=1 && \
-    ln -s /usr/share/maven/bin/mvn /usr/bin/mvn
-ENV MAVEN_HOME /usr/share/maven
-ENV MAVEN_CONFIG "$USER_HOME_DIR/.m2"
+# Make kafka-connect-transform source folder
+RUN mkdir /code /code/kafka-connect-transform
+WORKDIR /code/kafka-connect-transform
 
-# Install git needed by build 
-RUN apk add git
+# Install maven dependency packages (keep in image)
+COPY kafka-connect-transform/pom.xml /code/kafka-connect-transform
+RUN mvn dependency:resolve
 
-# Make source folder
-RUN mkdir /code /code/kafka-connect-jdbc
+# Package into JAR
+COPY kafka-connect-transform/src /code/kafka-connect-transform/src
+RUN mvn package
+
+# Make kafka-connect-jdbc source folder
+WORKDIR /code
+RUN mkdir /code/kafka-connect-jdbc
 WORKDIR /code/kafka-connect-jdbc
 
 # Install maven dependency packages (keep in image)
 COPY kafka-connect-jdbc/pom.xml /code/kafka-connect-jdbc
-
 RUN mvn dependency:resolve
 
+# Package into JAR
 COPY kafka-connect-jdbc/src /code/kafka-connect-jdbc/src
-COPY kafka-connect-jdbc/checkstyle /code/kafka-connect-jdbc/checkstyle
-
-# Package into JAR
-RUN mvn package -DskipTests
-
-WORKDIR /code
-RUN mkdir /code/kafka-connect-transform
-WORKDIR /code/kafka-connect-transform
-
-COPY kafka-connect-transform/pom.xml /code/kafka-connect-transform
-
-RUN mvn dependency:resolve
-
-COPY kafka-connect-transform/src /code/kafka-connect-transform/src
-
-# Package into JAR
-RUN mvn package
+RUN mvn package -DskipTests -Dcheckstyle.skip
 
 WORKDIR /code
 
