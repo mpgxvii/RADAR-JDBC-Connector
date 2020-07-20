@@ -159,7 +159,7 @@ services:
       - kafka-3
       - schema-registry-1
     environment:
-      CONNECT_BOOTSTRAP_SERVERS: http://radar-backend.co.uk:9092,http://radar-backend.co.uk:9093,http://radar-backend.co.uk:9094
+      CONNECT_BOOTSTRAP_SERVERS: PLAINTEXT://kafka-1:9092,PLAINTEXT://kafka-2:9092,PLAINTEXT://kafka-3:9092
       CONNECT_REST_PORT: 8083
       CONNECT_GROUP_ID: 'default'
       CONNECT_CONFIG_STORAGE_TOPIC: 'default.config'
@@ -167,8 +167,8 @@ services:
       CONNECT_STATUS_STORAGE_TOPIC: 'default.status'
       CONNECT_KEY_CONVERTER: 'io.confluent.connect.avro.AvroConverter'
       CONNECT_VALUE_CONVERTER: 'io.confluent.connect.avro.AvroConverter'
-      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: https://radar-backend.co.uk/schema/
-      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: https://radar-backend.co.uk/schema/
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema-registry-1:8081'
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema-registry-1:8081'
       CONNECT_INTERNAL_KEY_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
       CONNECT_INTERNAL_VALUE_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
       CONNECT_OFFSET_STORAGE_FILE_FILENAME: '/var/lib/kafka-connect-jdbc/logs/connect.offsets'
