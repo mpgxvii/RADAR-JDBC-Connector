@@ -29,7 +29,7 @@ RUN mvn package -DskipTests -Dcheckstyle.skip
 
 WORKDIR /code
 
-FROM confluentinc/cp-kafka-connect-base:5.5.0
+FROM ${BASE_IMAGE}
 
 MAINTAINER @mpgxvii
 
