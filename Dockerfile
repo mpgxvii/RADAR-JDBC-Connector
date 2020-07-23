@@ -11,24 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+ARG BASE_IMAGE=radarbase/kafka-connect-transform-keyvalue:5.5.1
 
 FROM maven:3.6-jdk-8 as builder
 
-# Make kafka-connect-transform source folder
-RUN mkdir /code /code/kafka-connect-transform
-WORKDIR /code/kafka-connect-transform
-
-# Install maven dependency packages (keep in image)
-COPY kafka-connect-transform/pom.xml /code/kafka-connect-transform
-RUN mvn dependency:resolve
-
-# Package into JAR
-COPY kafka-connect-transform/src /code/kafka-connect-transform/src
-RUN mvn package
-
 # Make kafka-connect-jdbc source folder
-WORKDIR /code
-RUN mkdir /code/kafka-connect-jdbc
+RUN mkdir /code /code/kafka-connect-jdbc
 WORKDIR /code/kafka-connect-jdbc
 
 # Install maven dependency packages (keep in image)
@@ -51,7 +39,6 @@ ENV CONNECT_PLUGIN_PATH /usr/share/java/kafka-connect/plugins
 
 # To isolate the classpath from the plugin path as recommended
 COPY --from=builder /code/kafka-connect-jdbc/target/components/packages/confluentinc-kafka-connect-jdbc-5.5.0/confluentinc-kafka-connect-jdbc-5.5.0/ ${CONNECT_PLUGIN_PATH}/kafka-connect-jdbc/
-COPY --from=builder /code/kafka-connect-transform/target/*.jar ${CONNECT_PLUGIN_PATH}/kafka-connect-transform/
 
 # Load topics validator
 COPY ./docker/kafka-wait /usr/bin/kafka-wait
