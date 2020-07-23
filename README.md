@@ -14,6 +14,8 @@ See [RADAR-base
 /
 kafka-connect-transform-keyvalue](https://github.com/RADAR-base/kafka-connect-transform-keyvalue) for more information.
 
+If you're using Docker, the transform plugin image is included in the Dockerfile. If you're installing manually, the `kafka-connecgt-transform-keyvalue` plugin must be installed to your Confluent plugin path.
+
 ## TimescaleDB Sink Connector
 
 ### Installation
