@@ -35,7 +35,7 @@ MAINTAINER @mpgxvii
 
 LABEL description="Kafka JDBC connector"
 
-ENV CONNECT_PLUGIN_PATH /usr/share/java/kafka-connect/plugins
+ENV CONNECT_PLUGIN_PATH /usr/share/kafka-connect/plugins
 
 # To isolate the classpath from the plugin path as recommended
 COPY --from=builder /code/kafka-connect-jdbc/target/components/packages/confluentinc-kafka-connect-jdbc-5.5.0/confluentinc-kafka-connect-jdbc-5.5.0/ ${CONNECT_PLUGIN_PATH}/kafka-connect-jdbc/
@@ -46,5 +46,6 @@ COPY ./docker/kafka-wait /usr/bin/kafka-wait
 # Load modified launcher
 COPY ./docker/launch /etc/confluent/docker/launch
 
+USER root
 # create parent directory for storing offsets in standalone mode
 RUN mkdir -p /var/lib/kafka-connect-jdbc/logs
