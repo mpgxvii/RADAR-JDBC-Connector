@@ -9,7 +9,12 @@ This project is based on Confluent's Kafka JDBC connector with additional functi
 
 ## Connect Single Message Transform
 
-This project also has a transform plugin that transforms the Kafka record before it is written to the database. This KeyValue transform plugin copies the record key fields and values to the record value so that they are included in the data written to the database. This plugin also converts time fields in epoch to Date objects (to prepare them for conversion into `TIMESTAMPTZ` in the connector later).
+This project depends on a transform plugin that transforms the Kafka record before it is written to the database.
+See [RADAR-base
+/
+kafka-connect-transform-keyvalue](https://github.com/RADAR-base/kafka-connect-transform-keyvalue) for more information.
+
+If you're using Docker, the transform plugin image is included in the Dockerfile. If you're installing manually, the `kafka-connect-transform-keyvalue` plugin must be installed to your Confluent plugin path.
 
 ## TimescaleDB Sink Connector
 

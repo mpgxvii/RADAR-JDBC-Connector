@@ -176,5 +176,5 @@ services:
       CONNECT_ZOOKEEPER_CONNECT: zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
       CONNECTOR_PROPERTY_FILE_PREFIX: 'sink-timescale'
       KAFKA_HEAP_OPTS: '-Xms256m -Xmx768m'
-      KAFKA_BROKERS: 1
+      KAFKA_BROKERS: 3
       CONNECT_LOG4J_LOGGERS: 'org.reflections=ERROR'
