@@ -50,7 +50,7 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
     }
   }
 
-  static final int CHUNK_TIME_INTERVAL = 86400000;
+  static final String CHUNK_TIME_INTERVAL = "1 day";
   static final String DELIMITER = ";";
   static final String HYPERTABLE_WARNING = "A result was returned when none was expected";
 
@@ -87,9 +87,9 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
 
     builder.append("SELECT create_hypertable('");
     builder.append(table);
-    builder.append("', 'time', migrate_data => TRUE, chunk_time_interval => ");
+    builder.append("', 'time', migrate_data => TRUE, chunk_time_interval => INTERVAL ');
     builder.append(CHUNK_TIME_INTERVAL);
-    builder.append(");");
+    builder.append(');");
     return builder.toString();
   }
 
