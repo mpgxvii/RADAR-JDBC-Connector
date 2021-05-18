@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * A {@link DatabaseDialect} for TimescaleDB.
@@ -53,6 +54,7 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
   static final String CHUNK_TIME_INTERVAL = "1 day";
   static final String DELIMITER = ";";
   static final String HYPERTABLE_WARNING = "A result was returned when none was expected";
+  static final String TIME_COLUMN = "time";
 
   /**
    * Create a new dialect instance with the given connector configuration.
@@ -71,18 +73,22 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
     if (table.schemaName() != null) {
       sqlQueries.add(buildCreateSchemaStatement(table));
     }
+    String timeColumn = getTimeColumn(fields);
+
     sqlQueries.add(super.buildCreateTableStatement(table, fields));
-    sqlQueries.add(buildCreateHyperTableStatement(table));
+    sqlQueries.add(buildCreateHyperTableStatement(table, timeColumn));
 
     return sqlQueries;
   }
 
-  public String buildCreateHyperTableStatement(TableId table) {
+  public String buildCreateHyperTableStatement(TableId table, String timeColumn) {
     ExpressionBuilder builder = expressionBuilder();
 
     builder.append("SELECT create_hypertable('");
     builder.append(table);
-    builder.append("', 'time', migrate_data => TRUE, chunk_time_interval => INTERVAL '");
+    builder.append("', '");
+    builder.append(timeColumn);
+    builder.append("', migrate_data => TRUE, chunk_time_interval => INTERVAL '");
     builder.append(CHUNK_TIME_INTERVAL);
     builder.append("');");
     return builder.toString();
@@ -94,6 +100,13 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
     builder.append("CREATE SCHEMA IF NOT EXISTS ");
     builder.append(table.schemaName());
     return builder.toString();
+  }
+
+  private String getTimeColumn(Collection<SinkRecordField> fields) {
+    Optional<SinkRecordField> field = fields.stream()
+                                            .filter(p -> p.name().toLowerCase().equals(TIME_COLUMN))
+                                            .findFirst();
+    return field.isPresent() ? field.get().name() : TIME_COLUMN;
   }
 
   @Override
