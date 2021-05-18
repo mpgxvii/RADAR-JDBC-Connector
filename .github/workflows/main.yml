@@ -38,4 +38,5 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
       
       - name: Build with Maven
+        working-directory: ./kafka-connect-jdbc
         run: mvn --batch-mode --update-snapshots verify
