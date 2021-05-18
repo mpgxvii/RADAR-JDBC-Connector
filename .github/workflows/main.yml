@@ -37,7 +37,7 @@ jobs:
           sudo apt-get -y install unzip
           unzip -d /usr/share maven.zip
           rm maven.zip
-          ln -s /usr/share/apache-maven-3.6.3/bin/mvn /usr/bin/mvn
+          ln -sf /usr/share/apache-maven-3.6.3/bin/mvn /usr/bin/mvn
           echo "M2_HOME=/usr/share/apache-maven-3.6.3" | tee -a /etc/environment
 
       - name: Cache Maven packages
