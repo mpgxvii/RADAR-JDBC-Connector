@@ -30,16 +30,6 @@ jobs:
         with:
           java-version: '8'
 
-      - name: Download Maven
-        run: |
-          curl -sL https://www-eu.apache.org/dist/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.zip -o maven.zip
-          sudo apt-get update
-          sudo apt-get -y install unzip
-          unzip -d /usr/share maven.zip
-          rm maven.zip
-          sudo ln -sf /usr/share/apache-maven-3.6.3/bin/mvn /usr/bin/mvn
-          echo "M2_HOME=/usr/share/apache-maven-3.6.3" | tee -a /etc/environment
-
       - name: Cache Maven packages
         uses: actions/cache@v2
         with:
