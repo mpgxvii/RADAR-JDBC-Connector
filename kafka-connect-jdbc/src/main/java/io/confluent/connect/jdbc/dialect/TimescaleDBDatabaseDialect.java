@@ -74,14 +74,13 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
     if (table.schemaName() != null) {
       sqlQueries.add(buildCreateSchemaStatement(table));
     }
-    Optional<SinkRecordField> timeField = getTimeField(fields);
+    sqlQueries.add(super.buildCreateTableStatement(table, fields));
 
+    Optional<SinkRecordField> timeField = getTimeField(fields);
     if (!timeField.isPresent()) 
       log.warn("Time column is not present. Skipping hypertable creation..");
-    else {
-      sqlQueries.add(super.buildCreateTableStatement(table, fields));
+    else 
       sqlQueries.add(buildCreateHyperTableStatement(table, timeField.get().name()));
-    }
 
     return sqlQueries;
   }
