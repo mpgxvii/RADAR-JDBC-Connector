@@ -28,6 +28,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -73,10 +74,15 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
     if (table.schemaName() != null) {
       sqlQueries.add(buildCreateSchemaStatement(table));
     }
-    String timeColumn = getTimeColumn(fields);
+    Optional<SinkRecordField> timeField = getTimeField(fields);
 
+    if (!timeField.isPresent()) {
+      log.warn("Time column is not present. Skipping hypertable creation..");
+      return Collections.EMPTY_LIST;
+    }
+       
     sqlQueries.add(super.buildCreateTableStatement(table, fields));
-    sqlQueries.add(buildCreateHyperTableStatement(table, timeColumn));
+    sqlQueries.add(buildCreateHyperTableStatement(table, timeField.get().name()));
 
     return sqlQueries;
   }
@@ -102,11 +108,10 @@ public class TimescaleDBDatabaseDialect extends PostgreSqlDatabaseDialect {
     return builder.toString();
   }
 
-  private String getTimeColumn(Collection<SinkRecordField> fields) {
-    Optional<SinkRecordField> field = fields.stream()
-                                            .filter(p -> p.name().toLowerCase().equals(TIME_COLUMN))
-                                            .findFirst();
-    return field.isPresent() ? field.get().name() : TIME_COLUMN;
+  private Optional<SinkRecordField> getTimeField(Collection<SinkRecordField> fields) {
+    return fields.stream()
+                  .filter(p -> p.name().toLowerCase().equals(TIME_COLUMN))
+                  .findFirst();
   }
 
   @Override
