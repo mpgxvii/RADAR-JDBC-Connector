@@ -15,8 +15,6 @@
 
 package io.confluent.connect.jdbc.source;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -25,22 +23,20 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.confluent.connect.jdbc.dialect.DatabaseDialect;
-import io.confluent.connect.jdbc.dialect.DatabaseDialects;
 import io.confluent.connect.jdbc.util.DatabaseDialectRecommender;
 import io.confluent.connect.jdbc.util.EnumRecommender;
 import io.confluent.connect.jdbc.util.QuoteMethod;
-import io.confluent.connect.jdbc.util.TableId;
 import io.confluent.connect.jdbc.util.TimeZoneValidator;
 
+import java.util.regex.Pattern;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Recommender;
 import org.apache.kafka.common.config.ConfigDef.Type;
+import org.apache.kafka.common.config.ConfigDef.Validator;
 import org.apache.kafka.common.config.ConfigDef.Width;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Time;
@@ -50,6 +46,7 @@ import org.slf4j.LoggerFactory;
 public class JdbcSourceConnectorConfig extends AbstractConfig {
 
   private static final Logger LOG = LoggerFactory.getLogger(JdbcSourceConnectorConfig.class);
+  private static Pattern INVALID_CHARS = Pattern.compile("[^a-zA-Z0-9._-]");
 
   public static final String CONNECTION_PREFIX = "connection.";
 
@@ -113,7 +110,14 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
       + "  * Use ``none`` if all NUMERIC columns are to be represented by Connect's DECIMAL "
       + "logical type.\n"
       + "  * Use ``best_fit`` if NUMERIC columns should be cast to Connect's INT8, INT16, "
-      + "INT32, INT64, or FLOAT64 based upon the column's precision and scale.\n"
+      + "INT32, INT64, or FLOAT64 based upon the column's precision and scale. This option may "
+      + "still represent the NUMERIC value as Connect DECIMAL if it cannot be cast to a native "
+      + "type without losing precision. For example, a NUMERIC(20) type with precision 20 would "
+      + "not be able to fit in a native INT64 without overflowing and thus would be retained as "
+      + "DECIMAL.\n"
+      + "  * Use ``best_fit_eager_double`` if in addition to the properties of ``best_fit`` "
+      + "described above, it is desirable to always cast NUMERIC columns with scale to Connect "
+      + "FLOAT64 type, despite potential of loss in accuracy.\n"
       + "  * Use ``precision_only`` to map NUMERIC columns based only on the column's precision "
       + "assuming that column's scale is 0.\n"
       + "  * The ``none`` option is the default, but may lead to serialization issues with Avro "
@@ -289,13 +293,6 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
   public static final String MODE_GROUP = "Mode";
   public static final String CONNECTOR_GROUP = "Connector";
 
-  // We want the table recommender to only cache values for a short period of time so that the
-  // blacklist and whitelist config properties can use a single query.
-  private static final Recommender TABLE_RECOMMENDER = new CachingRecommender(
-      new TableRecommender(),
-      Time.SYSTEM,
-      TimeUnit.SECONDS.toMillis(5)
-  );
   private static final Recommender MODE_DEPENDENTS_RECOMMENDER =  new ModeDependentsRecommender();
 
 
@@ -385,8 +382,7 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
         DATABASE_GROUP,
         ++orderInGroup,
         Width.LONG,
-        TABLE_WHITELIST_DISPLAY,
-        TABLE_RECOMMENDER
+        TABLE_WHITELIST_DISPLAY
     ).define(
         TABLE_BLACKLIST_CONFIG,
         Type.LIST,
@@ -396,8 +392,7 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
         DATABASE_GROUP,
         ++orderInGroup,
         Width.LONG,
-        TABLE_BLACKLIST_DISPLAY,
-        TABLE_RECOMMENDER
+        TABLE_BLACKLIST_DISPLAY
     ).define(
         CATALOG_PATTERN_CONFIG,
         Type.STRING,
@@ -600,6 +595,28 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
     ).define(
         TOPIC_PREFIX_CONFIG,
         Type.STRING,
+        "",
+        new Validator() {
+          @Override
+          public void ensureValid(final String name, final Object value) {
+            if (value == null) {
+              throw new ConfigException(name, value, "Topic prefix must not be null.");
+            }
+
+            String trimmed = ((String) value).trim();
+
+            if (trimmed.length() > 249) {
+              throw new ConfigException(name, value,
+                  "Topic prefix length must not exceed max topic name length, 249 chars");
+            }
+
+            if (INVALID_CHARS.matcher(trimmed).find()) {
+              throw new ConfigException(name, value,
+                  "Topic prefix must not contain any character other than "
+                      + "ASCII alphanumerics, '.', '_' and '-'.");
+            }
+          }
+        },
         Importance.HIGH,
         TOPIC_PREFIX_DOC,
         CONNECTOR_GROUP,
@@ -639,34 +656,8 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
     }
   }
 
-  private static class TableRecommender implements Recommender {
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public List<Object> validValues(String name, Map<String, Object> config) {
-      String dbUrl = (String) config.get(CONNECTION_URL_CONFIG);
-      if (dbUrl == null) {
-        throw new ConfigException(CONNECTION_URL_CONFIG + " cannot be null.");
-      }
-      // Create the dialect to get the tables ...
-      AbstractConfig jdbcConfig = new AbstractConfig(CONFIG_DEF, config);
-      DatabaseDialect dialect = DatabaseDialects.findBestFor(dbUrl, jdbcConfig);
-      try (Connection db = dialect.getConnection()) {
-        List<Object> result = new LinkedList<>();
-        for (TableId id : dialect.tableIds(db)) {
-          // Just add the unqualified table name
-          result.add(id.tableName());
-        }
-        return result;
-      } catch (SQLException e) {
-        throw new ConfigException("Couldn't open connection to " + dbUrl, e);
-      }
-    }
-
-    @Override
-    public boolean visible(String name, Map<String, Object> config) {
-      return true;
-    }
+  public String topicPrefix() {
+    return getString(JdbcSourceTaskConfig.TOPIC_PREFIX_CONFIG).trim();
   }
 
   /**
@@ -767,7 +758,8 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
   public enum NumericMapping {
     NONE,
     PRECISION_ONLY,
-    BEST_FIT;
+    BEST_FIT,
+    BEST_FIT_EAGER_DOUBLE;
 
     private static final Map<String, NumericMapping> reverse = new HashMap<>(values().length);
     static {
