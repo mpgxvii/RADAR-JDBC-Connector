@@ -105,6 +105,11 @@ public class GenericDatabaseDialect implements DatabaseDialect {
   protected static final int NUMERIC_TYPE_SCALE_HIGH = 127;
   protected static final int NUMERIC_TYPE_SCALE_UNSET = -127;
 
+  // The maximum precision that can be achieved in a signed 64-bit integer is 2^63 ~= 9.223372e+18
+  private static final int MAX_INTEGER_TYPE_PRECISION = 18;
+
+  private static final String PRECISION_FIELD = "connect.decimal.precision";
+
   /**
    * The provider for {@link GenericDatabaseDialect}.
    */
@@ -121,7 +126,14 @@ public class GenericDatabaseDialect implements DatabaseDialect {
     }
   }
 
-  protected final Logger log = LoggerFactory.getLogger(getClass());
+  private static final Logger glog = LoggerFactory.getLogger(GenericDatabaseDialect.class);
+
+  // This field was originally used by subclasses but resulted in incorrect namespaces in
+  // log files. Subclasses are now strongly encouraged to instantiate their own logger, using
+  // their own class. This field is only kept now to avoid breaking backwards compatibility for
+  // existing dialects that may rely on it.
+  @Deprecated
+  protected final Logger log = LoggerFactory.getLogger(GenericDatabaseDialect.class);
   protected final AbstractConfig config;
 
   /**
@@ -239,7 +251,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
       try {
         conn.close();
       } catch (Throwable e) {
-        log.warn("Error while closing connection to {}", jdbcDriverInfo, e);
+        glog.warn("Error while closing connection to {}", jdbcDriverInfo, e);
       }
     }
   }
@@ -341,7 +353,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
       Connection db,
       String query
   ) throws SQLException {
-    log.trace("Creating a PreparedStatement '{}'", query);
+    glog.trace("Creating a PreparedStatement '{}'", query);
     PreparedStatement stmt = db.prepareStatement(query);
     initializePreparedStatement(stmt);
     return stmt;
@@ -400,7 +412,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
     DatabaseMetaData metadata = conn.getMetaData();
     String[] tableTypes = tableTypes(metadata, this.tableTypes);
     String tableTypeDisplay = displayableTableTypes(tableTypes, ", ");
-    log.debug("Using {} dialect to get {}", this, tableTypeDisplay);
+    glog.debug("Using {} dialect to get {}", this, tableTypeDisplay);
 
     try (ResultSet rs = metadata.getTables(catalogPattern(), schemaPattern(), "%", tableTypes)) {
       List<TableId> tableIds = new ArrayList<>();
@@ -413,7 +425,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
           tableIds.add(tableId);
         }
       }
-      log.debug("Used {} dialect to find {} {}", this, tableIds.size(), tableTypeDisplay);
+      glog.debug("Used {} dialect to find {} {}", this, tableIds.size(), tableTypeDisplay);
       return tableIds;
     }
   }
@@ -432,6 +444,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
    * <p>This method can be overridden to exclude certain database tables.
    *
    * @param table the identifier of the table; may be null
+   * @return true if the table should be included; false otherwise
    */
   protected boolean includeTable(TableId table) {
     return true;
@@ -451,7 +464,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
       DatabaseMetaData metadata,
       Set<String> types
   ) throws SQLException {
-    log.debug("Using {} dialect to check support for {}", this, types);
+    glog.debug("Using {} dialect to check support for {}", this, types);
     // Compute the uppercase form of the desired types ...
     Set<String> uppercaseTypes = new HashSet<>();
     for (String type : types) {
@@ -470,7 +483,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
       }
     }
     String[] result = matchingTableTypes.toArray(new String[matchingTableTypes.size()]);
-    log.debug("Used {} dialect to find table types: {}", this, result);
+    glog.debug("Used {} dialect to find table types: {}", this, result);
     return result;
   }
 
@@ -495,7 +508,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
       } catch (SQLException e) {
         if (defaultIdentifierRules != null) {
           identifierRules.set(defaultIdentifierRules);
-          log.warn("Unable to get identifier metadata; using default rules", e);
+          glog.warn("Unable to get identifier metadata; using default rules", e);
         } else {
           throw new ConnectException("Unable to get identifier metadata", e);
         }
@@ -526,7 +539,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
     assert query != null;
     assert !query.isEmpty();
     try (Statement stmt = conn.createStatement()) {
-      log.debug("executing query " + query + " to get current time from database");
+      glog.debug("executing query " + query + " to get current time from database");
       try (ResultSet rs = stmt.executeQuery(query)) {
         if (rs.next()) {
           return rs.getTimestamp(1, cal);
@@ -537,7 +550,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
         }
       }
     } catch (SQLException e) {
-      log.error("Failed to get current time from DB using {} and query '{}'", this, query, e);
+      glog.error("Failed to get current time from DB using {} and query '{}'", this, query, e);
       throw e;
     }
   }
@@ -559,7 +572,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
     DatabaseMetaData metadata = connection.getMetaData();
     String[] tableTypes = tableTypes(metadata, this.tableTypes);
     String tableTypeDisplay = displayableTableTypes(tableTypes, "/");
-    log.info("Checking {} dialect for existence of {} {}", this, tableTypeDisplay, tableId);
+    glog.info("Checking {} dialect for existence of {} {}", this, tableTypeDisplay, tableId);
     try (ResultSet rs = connection.getMetaData().getTables(
         tableId.catalogName(),
         tableId.schemaName(),
@@ -567,7 +580,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
         tableTypes
     )) {
       final boolean exists = rs.next();
-      log.info(
+      glog.info(
           "Using {} dialect {} {} {}",
           this,
           tableTypeDisplay,
@@ -603,7 +616,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
       String tablePattern,
       String columnPattern
   ) throws SQLException {
-    log.debug(
+    glog.debug(
         "Querying {} dialect column metadata for catalog:{} schema:{} table:{}",
         this,
         catalogPattern,
@@ -829,7 +842,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
     DatabaseMetaData metadata = connection.getMetaData();
     String[] tableTypes = tableTypes(metadata, this.tableTypes);
     String tableTypeDisplay = displayableTableTypes(tableTypes, "/");
-    log.info("Checking {} dialect for type of {} {}", this, tableTypeDisplay, tableId);
+    glog.info("Checking {} dialect for type of {} {}", this, tableTypeDisplay, tableId);
     try (ResultSet rs = connection.getMetaData().getTables(
         tableId.catalogName(),
         tableId.schemaName(),
@@ -844,7 +857,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
         try {
           return TableType.get(tableType);
         } catch (IllegalArgumentException e) {
-          log.warn(
+          glog.warn(
               "{} dialect found unknown type '{}' for {} {}; using TABLE",
               this,
               tableType,
@@ -855,7 +868,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
         }
       }
     }
-    log.warn(
+    glog.warn(
         "{} dialect did not find type for {} {}; using TABLE",
         this,
         tableTypeDisplay,
@@ -983,7 +996,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
     int scale = columnDefn.scale();
     switch (sqlType) {
       case Types.NULL: {
-        log.debug("JDBC type 'NULL' not currently supported for column '{}'", fieldName);
+        glog.debug("JDBC type 'NULL' not currently supported for column '{}'", fieldName);
         return null;
       }
 
@@ -1049,36 +1062,16 @@ public class GenericDatabaseDialect implements DatabaseDialect {
 
       case Types.NUMERIC:
         if (mapNumerics == NumericMapping.PRECISION_ONLY) {
-          log.debug("NUMERIC with precision: '{}' and scale: '{}'", precision, scale);
-          if (scale == 0 && precision < 19) { // integer
-            Schema schema;
-            if (precision > 9) {
-              schema = (optional) ? Schema.OPTIONAL_INT64_SCHEMA : Schema.INT64_SCHEMA;
-            } else if (precision > 4) {
-              schema = (optional) ? Schema.OPTIONAL_INT32_SCHEMA : Schema.INT32_SCHEMA;
-            } else if (precision > 2) {
-              schema = (optional) ? Schema.OPTIONAL_INT16_SCHEMA : Schema.INT16_SCHEMA;
-            } else {
-              schema = (optional) ? Schema.OPTIONAL_INT8_SCHEMA : Schema.INT8_SCHEMA;
-            }
-            builder.field(fieldName, schema);
+          glog.debug("NUMERIC with precision: '{}' and scale: '{}'", precision, scale);
+          if (scale == 0 && precision <= MAX_INTEGER_TYPE_PRECISION) { // integer
+            builder.field(fieldName, integerSchema(optional, precision));
             break;
           }
         } else if (mapNumerics == NumericMapping.BEST_FIT) {
-          log.debug("NUMERIC with precision: '{}' and scale: '{}'", precision, scale);
-          if (precision < 19) { // fits in primitive data types.
+          glog.debug("NUMERIC with precision: '{}' and scale: '{}'", precision, scale);
+          if (precision <= MAX_INTEGER_TYPE_PRECISION) { // fits in primitive data types.
             if (scale < 1 && scale >= NUMERIC_TYPE_SCALE_LOW) { // integer
-              Schema schema;
-              if (precision > 9) {
-                schema = (optional) ? Schema.OPTIONAL_INT64_SCHEMA : Schema.INT64_SCHEMA;
-              } else if (precision > 4) {
-                schema = (optional) ? Schema.OPTIONAL_INT32_SCHEMA : Schema.INT32_SCHEMA;
-              } else if (precision > 2) {
-                schema = (optional) ? Schema.OPTIONAL_INT16_SCHEMA : Schema.INT16_SCHEMA;
-              } else {
-                schema = (optional) ? Schema.OPTIONAL_INT8_SCHEMA : Schema.INT8_SCHEMA;
-              }
-              builder.field(fieldName, schema);
+              builder.field(fieldName, integerSchema(optional, precision));
               break;
             } else if (scale > 0) { // floating point - use double in all cases
               Schema schema = (optional) ? Schema.OPTIONAL_FLOAT64_SCHEMA : Schema.FLOAT64_SCHEMA;
@@ -1086,13 +1079,26 @@ public class GenericDatabaseDialect implements DatabaseDialect {
               break;
             }
           }
+        } else if (mapNumerics == NumericMapping.BEST_FIT_EAGER_DOUBLE) {
+          glog.debug("NUMERIC with precision: '{}' and scale: '{}'", precision, scale);
+          if (scale < 1 && scale >= NUMERIC_TYPE_SCALE_LOW) { // integer
+            if (precision <= MAX_INTEGER_TYPE_PRECISION) { // fits in primitive data types.
+              builder.field(fieldName, integerSchema(optional, precision));
+              break;
+            }
+          } else if (scale > 0) { // floating point - use double in all cases
+            Schema schema = (optional) ? Schema.OPTIONAL_FLOAT64_SCHEMA : Schema.FLOAT64_SCHEMA;
+            builder.field(fieldName, schema);
+            break;
+          }
         }
         // fallthrough
 
       case Types.DECIMAL: {
-        log.debug("DECIMAL with precision: '{}' and scale: '{}'", precision, scale);
+        glog.debug("DECIMAL with precision: '{}' and scale: '{}'", precision, scale);
         scale = decimalScale(columnDefn);
         SchemaBuilder fieldBuilder = Decimal.builder(scale);
+        fieldBuilder.parameter(PRECISION_FIELD, Integer.toString(precision));
         if (optional) {
           fieldBuilder.optional();
         }
@@ -1164,11 +1170,25 @@ public class GenericDatabaseDialect implements DatabaseDialect {
       case Types.REF:
       case Types.ROWID:
       default: {
-        log.warn("JDBC type {} ({}) not currently supported", sqlType, columnDefn.typeName());
+        glog.warn("JDBC type {} ({}) not currently supported", sqlType, columnDefn.typeName());
         return null;
       }
     }
     return fieldName;
+  }
+
+  private Schema integerSchema(boolean optional, int precision) {
+    Schema schema;
+    if (precision > 9) {
+      schema = (optional) ? Schema.OPTIONAL_INT64_SCHEMA : Schema.INT64_SCHEMA;
+    } else if (precision > 4) {
+      schema = (optional) ? Schema.OPTIONAL_INT32_SCHEMA : Schema.INT32_SCHEMA;
+    } else if (precision > 2) {
+      schema = (optional) ? Schema.OPTIONAL_INT16_SCHEMA : Schema.INT16_SCHEMA;
+    } else {
+      schema = (optional) ? Schema.OPTIONAL_INT8_SCHEMA : Schema.INT8_SCHEMA;
+    }
+    return schema;
   }
 
   @Override
@@ -1262,8 +1282,8 @@ public class GenericDatabaseDialect implements DatabaseDialect {
         if (mapNumerics == NumericMapping.PRECISION_ONLY) {
           int precision = defn.precision();
           int scale = defn.scale();
-          log.trace("NUMERIC with precision: '{}' and scale: '{}'", precision, scale);
-          if (scale == 0 && precision < 19) { // integer
+          glog.trace("NUMERIC with precision: '{}' and scale: '{}'", precision, scale);
+          if (scale == 0 && precision <= MAX_INTEGER_TYPE_PRECISION) { // integer
             if (precision > 9) {
               return rs -> rs.getLong(col);
             } else if (precision > 4) {
@@ -1277,8 +1297,8 @@ public class GenericDatabaseDialect implements DatabaseDialect {
         } else if (mapNumerics == NumericMapping.BEST_FIT) {
           int precision = defn.precision();
           int scale = defn.scale();
-          log.trace("NUMERIC with precision: '{}' and scale: '{}'", precision, scale);
-          if (precision < 19) { // fits in primitive data types.
+          glog.trace("NUMERIC with precision: '{}' and scale: '{}'", precision, scale);
+          if (precision <= MAX_INTEGER_TYPE_PRECISION) { // fits in primitive data types.
             if (scale < 1 && scale >= NUMERIC_TYPE_SCALE_LOW) { // integer
               if (precision > 9) {
                 return rs -> rs.getLong(col);
@@ -1293,12 +1313,31 @@ public class GenericDatabaseDialect implements DatabaseDialect {
               return rs -> rs.getDouble(col);
             }
           }
+        } else if (mapNumerics == NumericMapping.BEST_FIT_EAGER_DOUBLE) {
+          int precision = defn.precision();
+          int scale = defn.scale();
+          glog.trace("NUMERIC with precision: '{}' and scale: '{}'", precision, scale);
+          if (scale < 1 && scale >= NUMERIC_TYPE_SCALE_LOW) { // integer
+            if (precision <= MAX_INTEGER_TYPE_PRECISION) { // fits in primitive data types.
+              if (precision > 9) {
+                return rs -> rs.getLong(col);
+              } else if (precision > 4) {
+                return rs -> rs.getInt(col);
+              } else if (precision > 2) {
+                return rs -> rs.getShort(col);
+              } else {
+                return rs -> rs.getByte(col);
+              }
+            }
+          } else if (scale > 0) { // floating point - use double in all cases
+            return rs -> rs.getDouble(col);
+          }
         }
         // fallthrough
 
       case Types.DECIMAL: {
         final int precision = defn.precision();
-        log.debug("DECIMAL with precision: '{}' and scale: '{}'", precision, defn.scale());
+        glog.debug("DECIMAL with precision: '{}' and scale: '{}'", precision, defn.scale());
         final int scale = decimalScale(defn);
         return rs -> rs.getBigDecimal(col, scale);
       }
@@ -1527,6 +1566,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
     return builder.toString();
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public StatementBinder statementBinder(
       PreparedStatement statement,
@@ -1545,6 +1585,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
     );
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public void bindField(
       PreparedStatement statement,
@@ -1574,6 +1615,9 @@ public class GenericDatabaseDialect implements DatabaseDialect {
    * Dialects not supporting `setObject(index, null)` can override this method
    * to provide a specific sqlType, as per the JDBC documentation
    * https://docs.oracle.com/javase/7/docs/api/java/sql/PreparedStatement.html
+   *
+   * @param schema the schema
+   * @return the SQL type
    */
   protected Integer getSqlTypeForSchema(Schema schema) {
     return null;
@@ -1745,6 +1789,12 @@ public class GenericDatabaseDialect implements DatabaseDialect {
            .of(fields);
     return Collections.singletonList(builder.toString());
   }
+
+  @Override
+  public void validateSpecificColumnTypes(
+          ResultSetMetaData rsMetadata,
+          List<ColumnId> columns
+  ) throws ConnectException { }
 
   protected List<String> extractPrimaryKeyFieldNames(Collection<SinkRecordField> fields) {
     final List<String> pks = new ArrayList<>();

@@ -59,6 +59,13 @@ public class SybaseDatabaseDialectTest extends BaseDialectTest<SybaseDatabaseDia
     assertPrimitiveMapping(Type.STRING, "text");
   }
 
+  @Override
+  @Test
+  public void bindFieldByteValue() throws SQLException {
+    int index = ThreadLocalRandom.current().nextInt();
+    verifyBindField(++index, Schema.INT8_SCHEMA, (byte) 42).setShort(index, (byte) 42);
+  }
+
   @Test
   public void shouldMapDecimalSchemaTypeToDecimalSqlType() {
     assertDecimalMapping(0, "decimal(38,0)");
@@ -325,7 +332,7 @@ public class SybaseDatabaseDialectTest extends BaseDialectTest<SybaseDatabaseDia
   }
 
   @Test
-  public void bindFieldPrimitiveValues() throws SQLException {
+  public void bindFieldPrimitiveValuesExceptString() throws SQLException {
     int index = ThreadLocalRandom.current().nextInt();
     verifyBindField(++index, Schema.INT8_SCHEMA, (short) 42).setShort(index, (short) 42);
     verifyBindField(++index, Schema.INT8_SCHEMA, (short) -42).setShort(index, (short) -42);
